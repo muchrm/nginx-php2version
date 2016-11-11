@@ -1,0 +1,103 @@
+version: '2'
+
+services:
+
+### PHP-FPM Container #######################################
+
+    php7:
+        container_name: php7
+        build:
+            context: ./php7
+        volumes_from:
+            - volumes_source
+        expose:
+            - "9000"
+        links:
+            - mongo
+    php5:
+        container_name: php5
+        build:
+            context: ./php5
+        volumes_from:
+            - volumes_source
+        expose:
+            - "9000"
+        links:
+            - mariadb
+
+### Nginx Server Container ##################################
+    nginx:
+        container_name: nginx
+        build:
+            context: ./nginx
+            args:
+                - PHP5_UPSTREAM=php5
+                - PHP7_UPSTREAM=php7
+        volumes_from:
+            - volumes_source
+        ports:
+            - "8080:80"
+            - "8081:8080"
+        links:
+            - php5
+            - php7
+
+### phpMyAdmin Container ####################################
+
+    phpmyadmin:
+        build: ./phpmyadmin
+        environment:
+            PMA_ARBITRARY: 1
+            MYSQL_USER: homestead
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: root
+        ports:
+            - "8083:80"
+        links:
+            # for mysql container
+            - "mariadb:db"
+            # for mariadb container
+            # - "mariadb:db"
+
+
+### MySQL Container #########################################
+
+    mariadb:
+        container_name: mariadb
+        build: ./mariadb
+        volumes_from:
+            - volumes_data
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_DATABASE: homestead
+            MYSQL_USER: homestead
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: root
+
+### MongoDB Container #######################################
+
+    mongo:
+        container_name: mongo
+        build: ./mongo
+        ports:
+            - "27017:27017"
+        volumes_from:
+            - volumes_data
+
+### Databases Data Container ################################
+
+    volumes_data:
+        image: tianon/true
+        volumes:
+            - ./data/mysql:/var/lib/mysql
+            - ./data/mongo:/data/db
+
+
+
+### Application Code Container ######################
+
+    volumes_source:
+        image: tianon/true
+        volumes:
+            - ./workspace/:/var/www/html
